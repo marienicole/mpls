@@ -76,6 +76,32 @@ class NetworkPacket:
         data_S = byte_S[NetworkPacket.dst_S_length : ]
         return self(dst, data_S)
 
+class MPLSFrame:
+    ##@param dst: address of the destination host
+    # @param data_S: packet payload
+    # @param priority: packet priority
+    def __init__(self, label, packet, label_length=10):
+        self.label_length = label_length
+        self.label = label
+        self.packet = packet
+
+    ## called when printing the object
+    def __str__(self):
+        return self.to_byte_S()
+
+    ## convert packet to a byte string for transmission over links
+    def to_byte_S(self):
+        byte_S = str(self.label).zfill(self.label_length)
+        byte_S += self.p.to_byte_S
+        return byte_S
+
+    ## extract a packet object from a byte string
+    # @param byte_S: byte string representation of the packet
+    @classmethod
+    def from_byte_S(self, byte_S):
+        label = byte_S[0 : MPLSFrame.label_length].strip('0')
+        data_S = byte_S[MPLSFrame.label_length : ]
+        return self(label, NetworkPacket.from_byte_S(data_S))
 
 ## Implements a network host for receiving and transmitting data
 class Host:
@@ -123,8 +149,6 @@ class Host:
             if(self.stop):
                 print (threading.currentThread().getName() + ': Ending')
                 return
-
-
 
 ## Implements a multi-interface router
 class Router:
@@ -211,4 +235,4 @@ class Router:
             self.process_queues()
             if self.stop:
                 print (threading.currentThread().getName() + ': Ending')
-                return 
+                return
