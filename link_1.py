@@ -26,7 +26,7 @@ class LinkFrame:
         elif self.type_S == 'Network':
             byte_S += 'N'
         else:
-            raise('%s: unknown type_S option: %s' %(self, self.type_S))
+            print('%s: unknown type_S option: %s' %(self, self.type_S))
         byte_S += self.data_S
         return byte_S
 
@@ -40,7 +40,7 @@ class LinkFrame:
         elif type_S == 'N':
             type_S = 'Network'
         else:
-            raise('%s: unknown type_S field: %s' % (self, type_S))
+            print('%s: unknown type_S field: %s' % (self, type_S))
         data_S = byte_S[self.type_S_length: ]
         return self(type_S, data_S)
 
@@ -86,7 +86,7 @@ class Link:
                     intf_a.next_avail_time = time.time() + pkt_size/intf_a.capacity
                     print('%s: transmitting frame "%s" on %s %s -> %s %s \n' \
                           ' - seconds until the next available time %f\n' \
-                          ' - queue size %d' \
+                          ' - queue size %d\n' \
                           % (self, pkt_S, node_a, node_a_intf, node_b, node_b_intf, intf_a.next_avail_time - time.time(), intf_a.out_queue.qsize()))
                 # uncomment the lines below to see waiting time until next transmission
 #                 else:
@@ -127,4 +127,3 @@ class LinkLayer:
             if self.stop:
                 print (threading.currentThread().getName() + ': Ending')
                 return
-    
