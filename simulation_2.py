@@ -1,5 +1,5 @@
-from network_1 import Router, Host
-from link_1 import Link, LinkLayer
+from network_2 import Router, Host
+from link_2 import Link, LinkLayer
 import threading
 from time import sleep
 import sys
@@ -7,12 +7,12 @@ from copy import deepcopy
 
 # configuration parameters
 router_queue_size = 0  # 0 means unlimited
-simulation_time = 10  # give the network_1 sufficient time to execute transfers
+simulation_time = 10  # give the network_2 sufficient time to execute transfers
 
 if __name__ == '__main__':
     object_L = []  # keeps track of objects, so we can kill their threads at the end
 
-    # create network_1 hosts
+    # create network_2 hosts
     host_1 = Host('H1')
     object_L.append(host_1)
     host_2 = Host('H2')
@@ -20,7 +20,7 @@ if __name__ == '__main__':
 
     # create routers and routing tables for connected clients (subnets)
     # Dest: interface
-    # table used to encapsulate network_1 packets into MPLS frames
+    # table used to encapsulate network_2 packets into MPLS frames
     encap_tbl_D = {'H2': 1}
     frwd_tbl_D = {  # table used to forward MPLS frames
         'H1':
@@ -38,7 +38,7 @@ if __name__ == '__main__':
                      'out_lbl': 'H2',
                      'out': 1}
     }
-    # table used to decapsulate network_1 packets from MPLS frames
+    # table used to decapsulate network_2 packets from MPLS frames
     decap_tbl_D = {'H1': 0}
     router_a = Router(name='RA',
                       intf_capacity_L=[500, 500],
@@ -75,7 +75,7 @@ if __name__ == '__main__':
                       max_queue_size=router_queue_size)
     object_L.append(router_b)
 
-    # create a Link Layer to keep track of links between network_1 nodes
+    # create a Link Layer to keep track of links between network_2 nodes
     link_layer = LinkLayer()
     object_L.append(link_layer)
 
@@ -97,7 +97,7 @@ if __name__ == '__main__':
         priority = i % 2
         host_1.udt_send('H2', 'MESSAGE_%d_FROM_H1' % i, priority)
 
-    # give the network_1 sufficient time to transfer all packets before quitting
+    # give the network_2 sufficient time to transfer all packets before quitting
     sleep(simulation_time)
 
     # join all threads
