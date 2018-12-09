@@ -77,6 +77,7 @@ class NetworkPacket:
         return self(dst, data_S)
 
 class MPLSFrame:
+    label_length = 20
     ##@param dst: address of the destination host
     # @param data_S: packet payload
     # @param priority: packet priority
@@ -228,18 +229,16 @@ class Router:
         intf = 1
 
         label = m_fr.label
-        print("\n\n", m_fr.to_byte_S(), "\n\n")
         # if this is the last router, decapsulate
-        if label in self.decap_tbl_D:
+        if str(label) in self.decap_tbl_D:
             intf = self.decap_tbl_D[label]
-            fr = LinkFrame('Network', m_fr.to_byte_S())
+            fr = LinkFrame('Network', m_fr.p.to_byte_S())
         # otherwise find where it should go & forward
-        elif label in self.frwd_tbl_D:
+        elif str(label) in self.frwd_tbl_D:
             intf = self.frwd_tbl_D[label]['out']
             fr = LinkFrame('MPLS', m_fr.to_byte_S())
 
         try:
-            fr = LinkFrame('Network', m_fr.to_byte_S())
             self.intf_L[intf].put(fr.to_byte_S(), 'out', True)
             print('%s: forwarding frame "%s" from interface %d to %d' % (self, fr, i, intf))
         except queue.Full:
