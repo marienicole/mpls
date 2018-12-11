@@ -1,6 +1,7 @@
 import queue
 import threading
 from link_3 import LinkFrame
+from copy import deepcopy
 
 
 # wrapper class for a queue of packets
@@ -8,22 +9,24 @@ class Interface:
     # @param maxsize - the maximum size of the queue storing packets
     #  @param capacity - the capacity of the link in bps
     def __init__(self, maxsize=0, capacity=500):
-        self.in_queue = queue.Queue(maxsize)
-        self.out_queue = queue.Queue(maxsize)
+        self.in_queue = queue.PriorityQueue(maxsize)
+        self.out_queue = queue.PriorityQueue(maxsize)
         self.capacity = capacity  # serialization rate
         self.next_avail_time = 0  # the next time the interface can transmit a packet
 
     # get packet from the queue interface
     # @param in_or_out - use 'in' or 'out' interface
-    def get(self, in_or_out):
+    def get(self, name, in_or_out):
         try:
             if in_or_out == 'in':
                 pkt_S = self.in_queue.get(False)
+                self.printQueue(name, in_or_out)
                 # if pkt_S is not None:
                 #     print('getting packet from the IN queue')
                 return pkt_S
             else:
                 pkt_S = self.out_queue.get(False)
+                self.printQueue(name, in_or_out)
                 # if pkt_S is not None:
                 #     print('getting packet from the OUT queue')
                 return pkt_S
@@ -34,13 +37,34 @@ class Interface:
     # @param pkt - Packet to be inserted into the queue
     # @param in_or_out - use 'in' or 'out' interface
     # @param block - if True, block until room in queue, if False may throw queue.Full exception
-    def put(self, pkt, in_or_out, block=False):
+    def put(self, name, pkt, in_or_out, block=False):
+        priority = pkt[len(pkt) - 1:]
+        pri = -1 * int(priority)
+
         if in_or_out == 'out':
             # print('putting packet in the OUT queue')
-            self.out_queue.put(pkt, block)
+            self.out_queue.put((pri, pkt), block)
         else:
             # print('putting packet in the IN queue')
-            self.in_queue.put(pkt, block)
+            self.in_queue.put((pri, pkt), block)
+
+        self.printQueue(name, in_or_out)
+
+    def printQueue(self, name, in_or_out):
+
+        outputText = 'Queue: ' + in_or_out + ' queue for ' + name + ' is: '
+
+        if in_or_out == 'out':
+            outputText += str(list(self.out_queue.queue))
+
+        else:
+            outputText += str(list(self.in_queue.queue))
+
+        print(outputText)
+
+
+
+
 
 
 # Implements a network layer packet
@@ -68,8 +92,8 @@ class NetworkPacket:
     def to_byte_S(self):
         byte_S = str(self.src) + str(self.dst)
         byte_S = byte_S.zfill(self.dst_S_length)
-        byte_S += str(self.priority)
         byte_S += self.data_S
+        byte_S += str(self.priority)
         return byte_S
 
     # extract a packet object from a byte string
@@ -78,8 +102,8 @@ class NetworkPacket:
     def from_byte_S(self, byte_S):
         src = byte_S[0: NetworkPacket.dst_S_length - 2].strip('0')
         dst = byte_S[NetworkPacket.dst_S_length - 2 : NetworkPacket.dst_S_length].strip('0')
-        priority = byte_S[NetworkPacket.dst_S_length : NetworkPacket.dst_S_length + 1]
-        data_S = byte_S[NetworkPacket.dst_S_length :]
+        data_S = byte_S[NetworkPacket.dst_S_length : len(byte_S) - 1]
+        priority = byte_S[len(byte_S) - 1 : ]
         return self(src, dst, data_S, priority)
 
 
@@ -142,15 +166,15 @@ class Host:
         fr = LinkFrame('Network', pkt.to_byte_S())
         # enque frame onto the interface for transmission
 
-        self.intf_L[0].put(fr.to_byte_S(), 'out')
+        self.intf_L[0].put(self.addr,fr.to_byte_S(), 'out')
 
     # receive frame from the link layer
     def udt_receive(self):
-        fr_S = self.intf_L[0].get('in')
+        fr_S = self.intf_L[0].get(self.addr,'in')
         if fr_S is None:
             return
         # decapsulate the network packet
-        fr = LinkFrame.from_byte_S(fr_S)
+        fr = LinkFrame.from_byte_S(fr_S[1])
         # should be receiving network packets by hosts
         assert(fr.type_S == 'Network')
         pkt_S = fr.data_S
@@ -200,11 +224,11 @@ class Router:
     def process_queues(self):
         for i in range(len(self.intf_L)):
             fr_S = None  # make sure we are starting the loop with a blank frame
-            fr_S = self.intf_L[i].get('in')  # get frame from interface i
+            fr_S = self.intf_L[i].get(self.name,'in')  # get frame from interface i
             if fr_S is None:
                 continue  # no frame to process yet
             # decapsulate the packet
-            fr = LinkFrame.from_byte_S(fr_S)
+            fr = LinkFrame.from_byte_S(fr_S[1])
             pkt_S = fr.data_S
             # process the packet as network, or MPLS
             if fr.type_S == "Network":
@@ -278,7 +302,7 @@ class Router:
             fr = LinkFrame('MPLS', m_fr.to_byte_S())
 
         try:
-            self.intf_L[intf].put(fr.to_byte_S(), 'out', True)
+            self.intf_L[intf].put(self.name,fr.to_byte_S(), 'out', True)
             print('%s: forwarding frame "%s" from interface %d to %d' %
                   (self, fr, i, intf))
         except queue.Full:

@@ -80,8 +80,10 @@ class Link:
                 # check if the interface is free to transmit a packet
                 if intf_a.next_avail_time <= time.time():
                     # transmit the packet
-                    pkt_S = intf_a.get('out')
-                    intf_b.put(pkt_S, 'in')
+                    pkt = intf_a.get(str(intf_a),'out')
+                    pkt_S = pkt[1]
+
+                    intf_b.put(str(node_b),pkt_S, 'in')
                     # update the next free time of the interface according to serialization delay
                     # assuming each character is 8 bits
                     pkt_size = len(pkt_S) * 8
